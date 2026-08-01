@@ -1,0 +1,38 @@
+# Temp files
+~$*
+*.tmp
+*.bak
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.eggs/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Large outputs (keep in separate storage)
+*.png
+*.jpg
+*.jpeg
+*.pdf
+*.dxf
+*.svg
+*.tif
+*.tiff
+*.npy
+
+# USD build artifacts
+*.usdc
+*.usdz
