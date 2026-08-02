@@ -477,6 +477,50 @@ class DrawingSheet:
             self.ax.text(x + 5, y + h - 8 - i * 5, note,
                         ha='left', va='center', fontsize=4)
 
+    def draw_patent_block(self, patent_ids, origin=None):
+        """Draw a patent reference block listing applicable patents.
+
+        Args:
+            patent_ids: list of PAT-XX strings from PATENT_MAP
+            origin: (x, y) top-left; defaults to above notes block
+        """
+        if not patent_ids:
+            return
+
+        if origin is None:
+            x = MARGIN
+            y = MARGIN + 40  # above the notes block
+        else:
+            x, y = origin
+
+        w = 130
+        line_h = 4.5
+        h = len(patent_ids) * line_h + 10
+
+        # Background (light green tint for patent callouts)
+        self.ax.add_patch(Rectangle(
+            (x, y), w, h, facecolor='#E8F5E9',
+            edgecolor='#2E7D32', linewidth=1
+        ))
+
+        # Header
+        self.ax.text(x + 5, y + h - 4, "PATENT REFERENCES:",
+                    ha='left', va='center', fontsize=4.5,
+                    fontweight='bold', color='#2E7D32')
+
+        for i, pat_id in enumerate(patent_ids):
+            pat = PATENT_MAP.get(pat_id, {})
+            title = pat.get('title', 'Unknown')[:28]
+            cat = pat.get('category', '')[:8]
+            line_y = y + h - 8 - i * line_h
+            self.ax.text(x + 5, line_y, f"{pat_id}",
+                        ha='left', va='center', fontsize=4,
+                        fontweight='bold', color='#1B5E20')
+            self.ax.text(x + 28, line_y, title,
+                        ha='left', va='center', fontsize=3.5, color='#333333')
+            self.ax.text(x + w - 5, line_y, cat,
+                        ha='right', va='center', fontsize=3, color='#666666')
+
     def draw_orthographic_view(self, corners, view_type, origin, scale=1.0,
                                is_cylinder=False, diam=0, height=0):
         """Draw an orthographic view at the given origin.
@@ -1147,6 +1191,21 @@ def generate_assembly_drawing(group_name, components, drawing_number, output_dir
     sheet.add_text(MARGIN + 5, sh - MARGIN - 22,
                   f"COMPONENTS: {len(components)}", fontsize=5)
 
+    # Patent references — match by group name keywords to sheet numbers
+    group_lower = group_name.lower()
+    applicable_patents = []
+    if any(k in group_lower for k in ['actuation', 'drill', 'carousel', 'mechanical']):
+        applicable_patents = SHEET_PATENTS.get(4, [])
+    elif any(k in group_lower for k in ['pneumatic', 'bio', 'thermal', 'env', 'fluidic']):
+        applicable_patents = SHEET_PATENTS.get(5, [])
+    elif any(k in group_lower for k in ['sensor', 'sampling', 'deployment', 'acoustic', 'seismic']):
+        applicable_patents = SHEET_PATENTS.get(5, []) + SHEET_PATENTS.get(6, [])
+    elif any(k in group_lower for k in ['compute', 'control', 'power', 'battery', 'radar', 'optical']):
+        applicable_patents = SHEET_PATENTS.get(7, [])
+
+    if applicable_patents:
+        sheet.draw_patent_block(applicable_patents, origin=(MARGIN, MARGIN + 45))
+
     base_name = f"ASSY_{sanitize_filename(group_name)}"
 
     sheet.save(str(output_dirs['png'] / f"{base_name}.png"), format='png')
@@ -1243,6 +1302,139 @@ PHASE_MAP = {
                           'Pneumatic Hub', 'Env. Sensor', 'VOC Sensor', 'Sensor Deployment'],
 }
 
+# ---------------------------------------------------------------------------
+# Patent Mapping (20 patents → 10 drawing sheets)
+# ---------------------------------------------------------------------------
+
+PATENT_MAP = {
+    'PAT-01': {
+        'file': '01_Spring_Compensated_O_Ring_Retainer.docx',
+        'title': 'Spring-Compensated O-Ring Retainer',
+        'sheet': 4,
+        'category': 'Sealing',
+    },
+    'PAT-02': {
+        'file': '02_Resonant_Backscatter_Phase_Array_RFID.docx',
+        'title': 'Resonant Backscatter Phase-Array RFID',
+        'sheet': 4,
+        'category': 'Kinematic',
+    },
+    'PAT-03': {
+        'file': '03_Dual_Layer_Piston_Ring_Seal.docx',
+        'title': 'Dual-Layer Piston Ring Seal',
+        'sheet': 4,
+        'category': 'Sealing',
+    },
+    'PAT-04': {
+        'file': '04_Variable_Pitch_Helical_Insert.docx',
+        'title': 'Variable-Pitch Helical Insert',
+        'sheet': 5,
+        'category': 'Pneumatic',
+    },
+    'PAT-05': {
+        'file': '05_Jetson_Adaptive_Pulsed_Pneumatic_Flow.docx',
+        'title': 'Jetson Adaptive Pulsed Pneumatic Flow',
+        'sheet': 5,
+        'category': 'Pneumatic',
+    },
+    'PAT-06': {
+        'file': '06_Inline_Expansion_Chamber.docx',
+        'title': 'Inline Expansion Chamber',
+        'sheet': 5,
+        'category': 'Pneumatic',
+    },
+    'PAT-07': {
+        'file': '07_Vision_Based_Pose_Calibration.docx',
+        'title': 'Vision-Based Pose Calibration',
+        'sheet': 6,
+        'category': 'Kinematic',
+    },
+    'PAT-08': {
+        'file': '08_Passive_Compliant_End_Effector.docx',
+        'title': 'Passive Compliant End-Effector',
+        'sheet': 6,
+        'category': 'Kinematic',
+    },
+    'PAT-09': {
+        'file': '09_Modular_Kinematic_Adapter_Plates.docx',
+        'title': 'Modular Kinematic Adapter Plates',
+        'sheet': 6,
+        'category': 'Kinematic',
+    },
+    'PAT-10': {
+        'file': '10_Electromagnetic_Clutch_Torque_Decoupling.docx',
+        'title': 'Electromagnetic Clutch Torque Decoupling',
+        'sheet': 4,
+        'category': 'Torque',
+    },
+    'PAT-11': {
+        'file': '11_Dual_Motor_Segmented_Torque.docx',
+        'title': 'Dual-Motor Segmented Torque',
+        'sheet': 4,
+        'category': 'Torque',
+    },
+    'PAT-12': {
+        'file': '12_Hollow_Conical_Rubber_Isolator.docx',
+        'title': 'Hollow Conical Rubber Isolator',
+        'sheet': 4,
+        'category': 'Isolation',
+    },
+    'PAT-13': {
+        'file': '13_Passive_Phase_Change_Thermal_Buffer.docx',
+        'title': 'Passive Phase-Change Thermal Buffer',
+        'sheet': 5,
+        'category': 'Isolation',
+    },
+    'PAT-14': {
+        'file': '14_Negative_Pressure_Filtered_Enclosure.docx',
+        'title': 'Negative-Pressure Filtered Enclosure',
+        'sheet': 5,
+        'category': 'Sealing',
+    },
+    'PAT-15': {
+        'file': '15_Passive_Condensation_Pipe.docx',
+        'title': 'Passive Condensation Pipe',
+        'sheet': 5,
+        'category': 'Sealing',
+    },
+    'PAT-16': {
+        'file': '16_Staged_Cyclone_HEPA_Filtration.docx',
+        'title': 'Staged Cyclone HEPA Filtration',
+        'sheet': 5,
+        'category': 'Sealing',
+    },
+    'PAT-17': {
+        'file': '17_Chassis_Integral_Boss_Integration.docx',
+        'title': 'Chassis Integral Boss Integration (DFMA REV B)',
+        'sheet': 4,
+        'category': 'DFMA',
+    },
+    'PAT-18': {
+        'file': '18_Cup_Lid_Assembly_Deletion.docx',
+        'title': 'Cup-Lid Assembly Deletion (DFMA REV B)',
+        'sheet': 4,
+        'category': 'DFMA',
+    },
+    'PAT-19': {
+        'file': '19_Servo_Bracket_Kinematic_Adapter_Standardization.docx',
+        'title': 'Servo Bracket Standardization (DFMA REV B)',
+        'sheet': 6,
+        'category': 'DFMA',
+    },
+    'PAT-20': {
+        'file': '20_Electronic_Module_Integration.docx',
+        'title': 'Electronic Module Integration',
+        'sheet': 7,
+        'category': 'DFMA',
+    },
+}
+
+# Reverse map: sheet number → list of patent IDs
+SHEET_PATENTS = {}
+for pat_id, pat_info in PATENT_MAP.items():
+    sheet_num = pat_info['sheet']
+    SHEET_PATENTS.setdefault(sheet_num, []).append(pat_id)
+
 
 def group_by_subsystem(components):
     groups = {}
@@ -1272,6 +1464,124 @@ def group_by_phase(components):
         else:
             groups['phase_2_firefly'].append(c)
     return {k: v for k, v in groups.items() if v}
+
+
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Patent Master Index Sheet (Sheet 10)
+# ---------------------------------------------------------------------------
+
+def generate_patent_index_sheet(output_dirs):
+    """Generate Sheet 10 — Master Patent Index with all 20 patents."""
+    sheet = DrawingSheet(sheet_size=ASSEMBLY_SHEET, is_assembly=True)
+    sw, sh = SHEET_SIZES[ASSEMBLY_SHEET]
+
+    # Title
+    sheet.add_text(sw / 2, sh - MARGIN - 10,
+                  "AQUILA SOVEREIGN — PATENT INNOVATION INDEX",
+                  fontsize=8, ha='center', fontweight='bold')
+    sheet.add_text(sw / 2, sh - MARGIN - 18,
+                  "20 Proprietary Innovations · DFMA REV B",
+                  fontsize=5, ha='center', color='#666666')
+
+    # Patent table
+    table_x = MARGIN + 10
+    table_y = sh - MARGIN - 30
+    col_widths = [20, 90, 25, 15]  # PAT#, TITLE, CATEGORY, SHEET
+    row_h = 7
+    header_h = 10
+    total_w = sum(col_widths)
+    total_h = header_h + 20 * row_h
+
+    # Table border
+    sheet.ax.add_patch(Rectangle(
+        (table_x, table_y - total_h), total_w, total_h,
+        fill=True, facecolor='#F8F8F8', edgecolor=COLOR_BORDER, linewidth=1.5
+    ))
+
+    # Header
+    headers = ['PAT #', 'INNOVATION TITLE', 'CATEGORY', 'SHEET']
+    cx = table_x
+    for i, (header, cw) in enumerate(zip(headers, col_widths)):
+        if i > 0:
+            sheet.ax.plot([cx, cx], [table_y, table_y - total_h],
+                        color=COLOR_BORDER, linewidth=0.5)
+        sheet.add_text(cx + cw / 2, table_y - header_h / 2, header,
+                      fontsize=5, ha='center', fontweight='bold')
+        cx += cw
+    sheet.ax.plot([table_x, table_x + total_w], [table_y - header_h, table_y - header_h],
+                color=COLOR_BORDER, linewidth=1)
+
+    # Patent rows
+    for idx, (pat_id, pat_info) in enumerate(sorted(PATENT_MAP.items())):
+        row_y = table_y - header_h - (idx + 1) * row_h
+        cx = table_x
+        values = [pat_id, pat_info['title'][:40], pat_info['category'], f"S{pat_info['sheet']}"]
+        for i, (val, cw) in enumerate(zip(values, col_widths)):
+            if i > 0:
+                sheet.ax.plot([cx, cx], [row_y, row_y + row_h],
+                            color=COLOR_BORDER, linewidth=0.3)
+            color = '#1B5E20' if i == 0 else '#333333'
+            weight = 'bold' if i == 0 else 'normal'
+            sheet.add_text(cx + cw / 2, row_y + row_h / 2, val,
+                          fontsize=3.5, ha='center', color=color, fontweight=weight)
+            cx += cw
+        if idx < 19:
+            sheet.ax.plot([table_x, table_x + total_w], [row_y, row_y],
+                        color=COLOR_BORDER, linewidth=0.3)
+
+    # Category summary (right side)
+    cat_x = table_x + total_w + 20
+    cat_y = table_y
+    categories = {}
+    for pat in PATENT_MAP.values():
+        cat = pat['category']
+        categories[cat] = categories.get(cat, 0) + 1
+
+    sheet.add_text(cat_x, cat_y, "CATEGORY SUMMARY",
+                  fontsize=5, ha='left', fontweight='bold')
+    for i, (cat, count) in enumerate(sorted(categories.items())):
+        sheet.add_text(cat_x, cat_y - 8 - i * 6, f"  {cat}: {count}",
+                      fontsize=4, ha='left')
+
+    # Sheet mapping summary (below categories)
+    map_y = cat_y - 8 - len(categories) * 6 - 15
+    sheet.add_text(cat_x, map_y, "SHEET DISTRIBUTION",
+                  fontsize=5, ha='left', fontweight='bold')
+    sheet_dist = {}
+    for pat in PATENT_MAP.values():
+        s = pat['sheet']
+        sheet_dist[s] = sheet_dist.get(s, 0) + 1
+    for i, (s, count) in enumerate(sorted(sheet_dist.items())):
+        sheet.add_text(cat_x, map_y - 8 - i * 6, f"  Sheet {s}: {count} patents",
+                      fontsize=4, ha='left')
+
+    # Title block
+    sheet.draw_title_block(
+        title="PATENT INDEX", drawing_number="ASD-PAT-001",
+        scale="NTS", material="N/A",
+        tolerance="N/A", sheet_num="10 OF 10")
+    sheet.draw_revision_block()
+    sheet.draw_notes_block(notes=[
+        "1. All 20 patents are proprietary AQUILA innovations.",
+        "2. DFMA REV B patents: PAT-17, PAT-18, PAT-19, PAT-20.",
+        "3. Patent applications filed via PatSnap Eureka TRIZ.",
+        "4. See individual .docx files for full specifications.",
+    ])
+
+    base_name = "ASSY_PATENT_INDEX"
+    sheet.save(str(output_dirs['png'] / f"{base_name}.png"), format='png')
+    sheet.save(str(output_dirs['pdf'] / f"{base_name}.pdf"), format='pdf')
+    sheet.save(str(output_dirs['svg'] / f"{base_name}.svg"), format='svg')
+
+    # DXF
+    if EZDXF_AVAILABLE:
+        dxf = DXFDrawing(sheet_size=ASSEMBLY_SHEET)
+        dxf.draw_title_block(title="PATENT INDEX", drawing_number="ASD-PAT-001",
+                            scale="NTS", material="N/A")
+        dxf.save(str(output_dirs['dxf'] / f"{base_name}.dxf"))
+
+    return base_name
 
 
 # ---------------------------------------------------------------------------
@@ -1319,7 +1629,7 @@ def main():
             sys.exit(1)
         print(f"\n[3] Generating drawing for {args.component}...")
         name = generate_component_drawing(comp, drawing_numbers[comp['ID']], output_dirs)
-        print(f"    → {name}.png/.pdf/.svg/.dxf")
+        print(f"    -> {name}.png/.pdf/.svg/.dxf")
         return
 
     if args.assembly:
@@ -1336,7 +1646,7 @@ def main():
                 name = generate_assembly_drawing(
                     f"SUB_{group_name}", comps, dwg_num, output_dirs, 'subsystem')
                 count += 1
-                print(f"    → {name} ({len(comps)} components)")
+                print(f"    -> {name} ({len(comps)} components)")
 
         if args.assembly in ('zone', 'all'):
             groups = group_by_zone(components)
@@ -1347,7 +1657,7 @@ def main():
                 name = generate_assembly_drawing(
                     f"ZONE_{group_name}", comps, dwg_num, output_dirs, 'zone')
                 count += 1
-                print(f"    → {name} ({len(comps)} components)")
+                print(f"    -> {name} ({len(comps)} components)")
 
         if args.assembly in ('phase', 'all'):
             groups = group_by_phase(components)
@@ -1358,7 +1668,7 @@ def main():
                 name = generate_assembly_drawing(
                     f"PHASE_{group_name}", comps, dwg_num, output_dirs, 'phase')
                 count += 1
-                print(f"    → {name} ({len(comps)} components)")
+                print(f"    -> {name} ({len(comps)} components)")
 
         print(f"\n  Generated {count} assembly drawings")
         return
@@ -1401,13 +1711,24 @@ def main():
 
     print(f"  Generated {assembly_count} assembly drawings")
 
+    # Generate patent index sheet (Sheet 10)
+    print(f"\n[5] Generating patent index sheet...")
+    try:
+        name = generate_patent_index_sheet(output_dirs)
+        print(f"    -> {name} (20 patents)")
+        patent_count = 1
+    except Exception as e:
+        print(f"    FAIL patent index: {e}")
+        patent_count = 0
+
     # Summary
     print(f"\n{'=' * 60}")
     print(f"DRAWING PACK COMPLETE")
     print(f"{'=' * 60}")
     print(f"  Component sheets: {generated}")
     print(f"  Assembly sheets:  {assembly_count}")
-    print(f"  Total sheets:     {generated + assembly_count}")
+    print(f"  Patent index:      {patent_count}")
+    print(f"  Total sheets:     {generated + assembly_count + patent_count}")
     print(f"  Formats:          DXF, PDF, SVG, PNG ({PNG_DPI} DPI)")
     print(f"  Standard:         ASME Y14.5 / ISO 128 (third-angle)")
     print(f"  Output:           {OUTPUT_DIR}")
